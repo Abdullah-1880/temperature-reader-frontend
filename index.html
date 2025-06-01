@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📡 Live Sensor Readings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        let currentFilter = "runtime";
+        let intervalId = null;
+
+        function fetchData() {
+            const url = `http://localhost/web-project/api/temp-data?filter=${currentFilter}`;
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.status === "success") {
+                        renderTable(response.data);
+                    } else {
+                        document.getElementById("data-table").innerHTML = "<p>Error loading data.</p>";
+                    }
+                }
+            };
+            xhr.onerror = function () {
+                document.getElementById("data-table").innerHTML = "<p>Request failed.</p>";
+            };
+            xhr.send();
+        }
+
+        function renderTable(data) {
+            if (data.length === 0) {
+                document.getElementById("data-table").innerHTML = "<p>No sensor data available.</p>";
+                return;
+            }
+
+            let html = `<table>
+                <tr>
+                    <th>ID</th>
+                    <th>Humidity (%)</th>
+                    <th>Temp (°C)</th>
+                    <th>Temp (°F)</th>
+                    <th>Heat Index (°C)</th>
+                    <th>Heat Index (°F)</th>
+                    <th>Timestamp</th>
+                </tr>`;
+
+            data.forEach(row => {
+                html += `<tr>
+                    <td>${row.id}</td>
+                    <td>${row.humidity}</td>
+                    <td>${row.temperature_c}</td>
+                    <td>${row.temperature_f}</td>
+                    <td>${row.heat_index_c}</td>
+                    <td>${row.heat_index_f}</td>
+                    <td>${row.created_at}</td>
+                </tr>`;
+            });
+
+            html += "</table>";
+            document.getElementById("data-table").innerHTML = html;
+        }
+
+        function handleFilterChange() {
+            const selected = document.getElementById("filter").value;
+            currentFilter = selected;
+
+            fetchData();
+
+            // Only auto-refresh in 'runtime' mode
+            if (intervalId) clearInterval(intervalId);
+            if (currentFilter === "runtime") {
+                intervalId = setInterval(fetchData, 3000);
+            }
+        }
+
+        window.onload = function () {
+            handleFilterChange(); // Initial fetch
+        };
+    </script>
+</head>
+<body>
+
+<h2>📡 Live Sensor Readings</h2>
+
+<div class="filter-container">
+    <label for="filter">Filter:</label>
+    <select id="filter" onchange="handleFilterChange()">
+        <option value="runtime">🟢 Runtime (Live)</option>
+        <option value="3days">📅 Last 3 Days</option>
+        <option value="7days">📅 Last 7 Days</option>
+    </select>
+</div>
+
+<div id="data-table">Loading data...</div>
+
+</body>
+</html>
